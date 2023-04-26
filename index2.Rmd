@@ -1,0 +1,195 @@
+---
+title: "Shiny Visualization"
+author: '""'
+date: "2022-12-10"
+output: 
+  html_notebook: 
+    number_sections: yes
+runtime: shiny
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(shiny)
+library(tidyverse)
+library(shinydashboard)
+library(plotly)
+```
+
+
+```{r echo=FALSE}
+mydata <- read.csv("C:/Users/Cornelius/Downloads/Air_Traffic_Passenger_Statistics.csv", stringsAsFactors=FALSE, na.strings = ".")
+Activity.Period<-as.Date(mydata$Activity.Period, origin ="1900-01-07")
+Operating.Airline <- as.factor(mydata$Operating.Airline)
+    
+Published.Airline<-as.factor(mydata$Published.Airline)
+GEO.Summary<-as.factor(mydata$GEO.Summary)
+GEO.Region<-as.factor(mydata$GEO.Region)
+Price<-as.factor(mydata$Price)
+```
+
+
+
+
+##  Introduction and Data description  
+Air traffic passenger statistics data is one of the most helpful tool for understanding the airline industry and making travel plans. Using the Open Flights, passenger statistics data for air traffic from 2005 to 2015 we are going to make a visualization dashboard with several graphs on the data variables. The details of the data set include the operational airline, the quantity of passengers, the location, the terminal, the activity type code, the boarding area, the price category code, the published airline, and the flight's year. It includes information on the airlines, airports, and locations where the flights began and ended. It also includes information about the terminal, boarding area, pricing range, and passenger count. The first picture of the dashboard that we created using the airline data displays all the variables which are present in the dataset.   
+
+```{r}
+head(mydata)
+tail(mydata)
+```
+
+
+The dashboard heading was then assigned the name of the dataset and several buttons created to make the dashboard look more impressive. Also the space and area to display the visualization was created and the first test chart was on the activity period.  
+
+
+
+```{r echo=FALSE}
+
+ui <- fluidPage(
+    sidebarLayout(
+        sidebarPanel(
+            h2("Airline Traffic passenger Data"),
+            selectInput(inputId = "dv", label = "Category",
+                        choices = c("ID", "Activity.Period", "Year", "Operating.Airline", "OPA.IATA.Code", "Published_Airline","Price","PA.IATA.Code", "GEO.Summary", "GEO.Region", "Bound.Type", "Passenger.Count"),
+                        selected = "ID"),
+        selectInput(inputId = "Price", "Price(s)",
+                        choices = levels(mydata$Passenger.Count),
+                        multiple = TRUE,
+                        selected = c("Activity.Period", "Year", "Operating.Airline", "OPA.IATA.Code", "Published.Airline","Price","PA.IATA.Code", "GEO.Summary", "GEO.Region", "Bound.Type", "Passenger.Count")),
+            dateRangeInput(inputId = "date", "Date range",
+                           start = min(mydata$Activity.Period),
+                           end   = max(mydata$Activity.Period)),
+            downloadButton(outputId = "download.data", label = "Download"),
+        ),
+        mainPanel(
+            plotlyOutput(outputId = "plot1"), br(),
+            em("visualizing the Passenger.Count"),
+            plotlyOutput(outputId = "plot2"), br(),
+            em("visualizing the customer ID"),
+            plotlyOutput(outputId = "plot3"), br(),
+            em("visualizing the Published.Airline"),
+            plotlyOutput(outputId = "plot4"), br(),
+            em("visualizing the airline prices"),
+            plotlyOutput(outputId = "plot5"), br(),
+            em("Displaying the a chart on the Operating.Airline"),
+            br(), br(), br(),
+            DT::dataTableOutput(outputId = "table")
+        )
+    )
+)
+
+server <- function(input, output) {
+    filtered_data <- reactive({
+        subset(mydata,
+               mydata$Passenger.Count %in% input$mydata$Passenger.Count &
+               mydata$Activity.Period >= input$mydata$Activity.Period[1] & mydata$Activity.Period <= input$mydata$Activity.Period[2])
+      subset(mydata,
+               mydata$ID %in% input$mydata$ID &
+               mydata$Activity.Period >= input$mydata$Activity.Period[1] & mydata$Activity.Period <= input$mydata$Activity.Period[2])
+      subset(mydata,
+               mydata$Published.Airline %in% input$mydata$Published.Airline &
+               mydata$Activity.Period >= input$mydata$Activity.Period[1] & mydata$Activity.Period <= input$mydata$Activity.Period[2])
+      subset(mydata,
+               mydata$Price %in% input$mydata$Price &
+               mydata$Activity.Period >= input$mydata$Activity.Period[1] & mydata$Activity.Period <= input$mydata$Activity.Period[2])
+      subset(mydata,
+               mydata$Operating.Airline %in% input$mydata$Operating.Airline &
+               mydata$Activity.Period >= input$mydata$Activity.Period[1] & mydata$Activity.Period <= input$mydata$Activity.Period[2])
+      })
+    
+ output$plot1 <- renderPlotly({
+        ggplot(mydata,
+          aes_string(x="Activity.Period", y=mydata$Passenger.Count, color="Passenger.Count")) +
+                geom_point(alpha=0.5) + theme(legend.position = "none") +
+                    ylab("Passenger.Count")
+        })
+   
+ output$plot2 <- renderPlotly({
+   ggplot(mydata)+geom_point(aes(y=mydata$Passenger.Count,x="Activity.Period")) + scale_x_continuous() + geom_jitter(aes(y=mydata$ID,x="Activity.Period"))
+        })
+ 
+ output$plot3 <- renderPlotly({
+        ggplot(data = mydata,
+          aes(x="Activity.Period", y=mydata$Passenger.Count))+
+                geom_point(alpha=0.5) + theme(legend.position = "none") +
+                    ylab("Published.Airline")
+ })
+ 
+  output$plot4 <- renderPlotly({
+        ggplot(mydata,
+          aes_string(x="Activity.Period", y=mydata$Passenger.Count, color="Price")) +
+                geom_point(alpha=0.5) + theme(legend.position = "none") +
+                    ylab("Flight Price(s)")
+ })
+  
+    output$plot5 <- renderPlotly({
+        ggplot(mydata,
+          aes_string(x="Activity.Period", y=mydata$Passenger.Count , color="Operating.Airline ")) +
+                geom_point(alpha=0.5) + theme(legend.position = "none") +
+                    ylab("Operating.Airline ")
+ })
+   output$plot2 <- renderPlotly({
+        ggplot(mydata,
+          aes_string(x="Activity.Period", y=mydata$Passenger.Count, color="GEO.Summary")) +
+                geom_point(alpha=0.5) + theme(legend.position = "none") +
+                    ylab("GEO.Summary")
+ })
+
+    output$table <- DT::renderDataTable({
+        filtered_data()
+    })
+
+    output$download_data <- downloadHandler(
+        filename = "download.data.csv",
+        content = function(file) {
+            data <- filtered_data()
+            write.csv(data, file, row.names = FALSE)
+        }
+    )
+
+}
+
+shinyApp(ui = ui, server = server)
+
+```
+
+## Other visualizations
+
+```{r eruptions, echo=FALSE}
+inputPanel(
+  selectInput("n_breaks", label = "Number of bins:",
+              choices = c(10, 20, 35, 50), selected = 20),
+  
+  sliderInput("bw_adjust", label = "Bandwidth adjustment:",
+              min = 0.2, max = 2, value = 1, step = 0.2)
+)
+
+renderPlot({
+  hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
+       xlab = "Activity period(years)", main = "Passenger_Count Per during each activity period")
+  
+  dens <- density(faithful$eruptions, adjust = input$bw_adjust)
+  lines(dens, col = "blue")
+})
+```
+
+## More Visualizations
+
+
+```{r tabsets, echo=FALSE}
+shinyAppDir(
+  system.file("examples/06_tabsets", package = "shiny"),
+  options = list(
+    width = "100%", height = 550
+  )
+)
+```
+
+
+
+
